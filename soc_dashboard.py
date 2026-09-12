@@ -62,14 +62,24 @@ st.sidebar.metric("Alerts Displayed", len(filtered_df))
 # ==========================================
 st.divider()
 
-if filtered_df.empty:
+# --- THE FIX: Limit rows rendered to prevent browser lag ---
+DISPLAY_LIMIT = 20
+total_results = len(filtered_df)
+
+if total_results > DISPLAY_LIMIT:
+    st.info(f"⚠️ **Performance Limit:** Showing the top {DISPLAY_LIMIT} results out of {total_results}. Use the sidebar filters to narrow down your search.")
+    working_df = filtered_df.head(DISPLAY_LIMIT)
+else:
+    working_df = filtered_df
+
+if working_df.empty:
     st.warning("No alerts match your current filters.")
 else:
-    for index, row in filtered_df.iterrows():
+    for index, row in working_df.iterrows():
         # Article Header
         st.subheader(f"🚨 {row['title']}")
         
-        # Displaying Source alongside the newly gathered Date tracking metric
+        # Displaying Source alongside the Date
         st.caption(f"**Source:** {row['source']} | **Published:** {row.get('date', 'Unknown Date')} | **[🔗 View Original Source]({row['url']})**")
         
         # Display Threat Tags
