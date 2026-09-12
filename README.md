@@ -58,7 +58,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 4. Install dependencies
 
 ```bash
-pip install -r requirements.txt
+pip install beautifulsoup4 feedparser pandas streamlit
 ```
 
 Usage
