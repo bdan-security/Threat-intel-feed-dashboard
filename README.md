@@ -46,3 +46,41 @@ Each category provides an operational triage checklist directly inside the dashb
 ```bash
 git clone [https://github.com/bdan-security/Threat-intel-feed-dashboard.git](https://github.com/bdan-security/Threat-intel-feed-dashboard.git)
 cd Threat-intel-feed-dashboard
+```
+
+2. Set up a virtual environment (recommended)
+
+```bash
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+4. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+Usage
+Step 1: Ingest Threat Intelligence
+Run the ingestion script to pull the latest entries into the database:
+
+```bash
+python intel_ingestor.py
+```
+
+Step 2: Launch the SOC Dashboard
+Start the local Streamlit application:
+
+```bash
+streamlit run soc_dashboard.py
+```
+
+Open your browser at http://localhost:8501 to view and filter the collected intelligence.
+
+Known Limitations & Planned Enhancements
+Regex Edge Cases: Standard regex patterns can occasionally catch benign IP addresses (e.g., public DNS like 8.8.8.8) or version numbers formatted similarly to hashes.
+
+Feed Coverage: Reliance on RSS summaries means only articles providing substantive summaries will yield complete IOC matches without scraping the full webpage.
+
+Defanging: Future revisions will incorporate automatic IOC defanging (e.g., converting example[.]com or 192.168.1[.]1) to prevent accidental execution.
