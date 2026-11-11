@@ -1,13 +1,23 @@
-# Python cache
-__pycache__/
-*.py[cod]
-
-# Local database (generated locally by intel_ingestor.py)
-company_defense.db
+# Local database: rebuilt by running the scraper; holds third-party article text
 *.db
+*.db-journal
 *.sqlite3
 
-# Virtual environments
-venv/
+# Python
+__pycache__/
+*.py[cod]
 .venv/
-env/
+venv/
+
+# Exports downloaded from the dashboard
+*.csv
+blocklist_*.txt
+
+# Streamlit secrets (never commit)
+.streamlit/secrets.toml
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

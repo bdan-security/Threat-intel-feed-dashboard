@@ -1,86 +1,72 @@
-# Threat Intelligence Feed & IOC Dashboard
+# CyberScraper
 
-A modular Python pipeline that aggregates RSS feeds from cybersecurity news outlets and official advisories (such as CISA, SANS ISC, and BleepingComputer), extracts technical Indicators of Compromise (IOCs) using regular expressions, and visualizes the data inside a Streamlit web interface.
+A lightweight threat-intelligence console. CyberScraper collects cybersecurity news from 19 RSS sources, extracts indicators of compromise, tags each article by threat category and severity, and presents everything in a Streamlit dashboard.
 
-## Overview
+## Features
 
-Staying informed about emerging threats often requires checking multiple websites and advisories manually. This project provides a local, automated pipeline to:
-1. Collect recent articles and advisories across 19 curated security sources.
-2. Scan article summaries for technical indicators (IPv4 addresses, SHA-256/MD5 hashes, and CVE identifiers).
-3. Map threat keywords to actionable incident response checklists (ransomware, brute-force, malware, etc.).
-4. Store records in a local SQLite database with duplicate URL prevention.
-5. Provide a searchable, filterable dashboard built with Streamlit for review and triage.
+**Collection** (`rules_scraper.py`)
+- Fetches 19 security news and advisory feeds in parallel (BleepingComputer, The Hacker News, Krebs on Security, CISA, NCSC UK, SANS ISC and more)
+- Extracts IoCs: IPv4 addresses (public only), SHA256 / SHA1 / MD5 hashes and CVE IDs, including defanged indicators such as `1.2.3[.]4`
+- Tags 10 threat categories (ransomware, vulnerability, data breach, phishing, malware, nation-state / APT and others) using whole-word keyword rules
+- Scores severity as Critical, High, Medium or Low (for example zero-days and actively exploited flaws are Critical)
+- Attaches a response playbook to each threat category
+- Stores everything in a local SQLite database with de-duplication by URL
 
-## Architecture
+**Dashboard** (`dashboard.py`)
+- 24-hour threat-posture banner and KPI tiles compared with the previous period
+- Filterable intelligence feed (time window, severity, category, source, keyword / IoC search) with CSV export
+- Analytics: daily volume by severity, threat categories, top sources, most-mentioned CVEs with NVD links
+- Indicator explorer with CSV and plain-text blocklist export for EDR / firewall import
+- **Sync now** button to fetch new articles without leaving the dashboard
 
-The project is split into two decoupled scripts to separate data collection from the user interface:
+## Getting started
 
-- **`intel_ingestor.py` (Collection & Extraction):** Connects to RSS feeds using `feedparser`, parses HTML summaries with `BeautifulSoup`, runs regex filters to identify IOCs, and writes unique entries into `company_defense.db`.
-- **`soc_dashboard.py` (Interface & Filtering):** Connects to the SQLite database via `pandas` and renders an interactive web dashboard in `streamlit`, allowing filtering by threat category or free-text IOC search.
+Requires Python 3.10 or newer.
 
-## Extracted Indicators & Detection Logic
-
-### 1. Regex Patterns
-The ingestion engine scans text bodies using targeted regular expressions for:
-- **IPv4 addresses:** Matches dotted-quad IP format (`0.0.0.0` - `255.255.255.255`).
-- **Cryptographic Hashes:** 64-character hex strings (SHA-256) and 32-character hex strings (MD5).
-- **Vulnerabilities:** Standard `CVE-YYYY-NNNN+` identifiers.
-
-### 2. Threat Classification
-Articles are categorized using keyword matching across categories such as:
-- Ransomware
-- Authentication / Credential Attacks
-- Malware & C2 Infrastructure
-- DDoS Attacks
-- Third-Party / Supply Chain
-- Privilege Escalation
-
-Each category provides an operational triage checklist directly inside the dashboard.
-
-## Installation & Setup
-
-### Prerequisites
-- Python 3.9 or higher
-
-### 1. Clone the repository
 ```bash
-git clone [https://github.com/bdan-security/Threat-intel-feed-dashboard.git](https://github.com/bdan-security/Threat-intel-feed-dashboard.git)
+git clone https://github.com/bdan-security/Threat-intel-feed-dashboard.git
 cd Threat-intel-feed-dashboard
+pip install -r requirements.txt
 ```
 
-2. Set up a virtual environment (recommended)
+Collect the first batch of articles:
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python rules_scraper.py
 ```
 
-4. Install dependencies
+Start the dashboard (run it from the project folder so the theme in `.streamlit/config.toml` is applied):
 
 ```bash
-pip install beautifulsoup4 feedparser pandas streamlit
+streamlit run dashboard.py
 ```
 
-Usage
-Step 1: Ingest Threat Intelligence
-Run the ingestion script to pull the latest entries into the database:
+The database `company_defense.db` is created next to the scripts on first run.
+
+## Scraper options
 
 ```bash
-python intel_ingestor.py
+python rules_scraper.py --per-feed 30   # read more entries from each feed (default 20)
+python rules_scraper.py --reprocess     # re-apply the current tagging rules to every stored article
 ```
 
-Step 2: Launch the SOC Dashboard
-Start the local Streamlit application:
+To keep the data fresh, schedule `python rules_scraper.py` to run hourly with Windows Task Scheduler or cron.
 
-```bash
-streamlit run soc_dashboard.py
-```
+## Customising
 
-Open your browser at http://localhost:8501 to view and filter the collected intelligence.
+All rules live at the top of `rules_scraper.py`:
 
-Known Limitations & Planned Enhancements
-Regex Edge Cases: Standard regex patterns can occasionally catch benign IP addresses (e.g., public DNS like 8.8.8.8) or version numbers formatted similarly to hashes.
+| What | Where |
+|---|---|
+| News sources | `FEEDS` |
+| Threat categories, keywords and playbooks | `THREAT_MATRIX` |
+| Severity rules | `_SEVERITY_RULES` |
+| IoC patterns | `IOC_PATTERNS` |
 
-Feed Coverage: Reliance on RSS summaries means only articles providing substantive summaries will yield complete IOC matches without scraping the full webpage.
+After changing categories or severity rules, run `python rules_scraper.py --reprocess` to re-tag existing articles.
 
-Defanging: Future revisions will incorporate automatic IOC defanging (e.g., converting example[.]com or 192.168.1[.]1) to prevent accidental execution.
+## Notes
+
+- Severity and categories come from keyword rules applied to feed titles and summaries, so treat them as triage hints rather than verdicts. Always read the original article.
+- IoCs are only found when they appear in the feed text. Most news feeds include just a summary, so many articles won't have any.
+- Article content belongs to the original publishers. The database is excluded from the repository by `.gitignore`.
